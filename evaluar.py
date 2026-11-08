@@ -1,4 +1,4 @@
-# evaluar.py - evalúa el error (%) y la matriz de confusión (por persona)
+# evaluar.py - evalúa el error (%) (por persona)
 import json
 import os
 import re
@@ -47,7 +47,7 @@ def entrenar_con_archivos(archivos_por_clase, cortes_hz):
     return energias, indices
 
 
-def predecir(x, energias, indices):
+def clasificar(x, energias, indices):
     """Predice la clase de una señal x."""
     z = espectro(x)
     E_X = energias_subbandas(z, indices)
@@ -75,8 +75,7 @@ def main():
         print("No hay grabaciones en", config.RUTA_GRABACIONES)
         return
 
-    # Matriz de confusión
-    matriz = {c_real: {c_pred: 0 for c_pred in config.CLASES} for c_real in config.CLASES}
+    # Matriz de confusión (no requerida)
     total = 0
     correctos = 0
 
@@ -100,8 +99,7 @@ def main():
         # Probar todas las grabaciones de la persona dejada fuera
         for ruta in grupos[clase_test][persona_test]:
             x = trainer.leer_wav(ruta)
-            pred = predecir(x, energias, indices)
-            matriz[clase_test][pred] += 1
+            pred = clasificar(x, energias, indices)
             total += 1
             if pred == clase_test:
                 correctos += 1
@@ -114,10 +112,6 @@ def main():
     print("Total de pruebas:", total)
     print("Correctos:", correctos)
     print("Error: %.2f %%" % error)
-    print("\nMatriz de confusión (filas = real, columnas = predicho):")
-    print(" " * 12 + "  ".join("%-8s" % c for c in config.CLASES))
-    for c_real in config.CLASES:
-        print("%-12s" % c_real, "  ".join("%-8d" % matriz[c_real][c_pred] for c_pred in config.CLASES))
 
 
 if __name__ == "__main__":
