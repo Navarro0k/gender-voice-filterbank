@@ -34,7 +34,6 @@ Por decisión del usuario **no hay normalización ni filtro de media móvil**: l
 config.py            FS, DURACION, N, N_CORTES, cortes iniciales, rutas
 trainer.py           lee .wav, promedia espectros por clase, guarda el JSON
 recognizer.py        graba del micrófono, calcula E_X y compara con el JSON
-evaluar.py           mide el error (%) y la matriz de confusión
 app.py               interfaz gráfica (CustomTkinter + matplotlib)
 models/              modelo.json (generado)
 core/
@@ -67,7 +66,7 @@ No resolverlas por cuenta propia ni presentarlas como definitivas.
 
 ## Riesgo conocido
 
-Sin normalización, la energía depende del volumen y de la distancia al micrófono. Grabar el banco y probar en tiempo real con el mismo micrófono y ganancia, y a una distancia parecida. Si `evaluar.py` muestra un error alto por esta causa, avisar al usuario en lugar de agregar normalización por cuenta propia.
+Sin normalización, la energía depende del volumen y de la distancia al micrófono. Grabar el banco y probar en tiempo real con el mismo micrófono y ganancia, y a una distancia parecida. Si `recognizer.py` muestra un error alto por esta causa, avisar al usuario en lugar de agregar normalización por cuenta propia.
 
 ## Convenciones
 
@@ -81,7 +80,7 @@ Sin normalización, la energía depende del volumen y de la distancia al micróf
 ```
 pip install -r requirements.txt
 python trainer.py
-python evaluar.py
+python recognizer.py
 python app.py
 ```
 

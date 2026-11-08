@@ -15,7 +15,6 @@ gender-voice-filterbank/
 ├── config.py
 ├── trainer.py
 ├── recognizer.py
-├── evaluar.py
 ├── app.py
 ├── models/
 │   └── modelo.json            # generado por trainer.py
@@ -57,14 +56,7 @@ Verificación: con un ejemplo pequeño hecho a mano, comprobar que las subbandas
 - Calcular E_X con los cortes del JSON y las diferencias absolutas contra cada clase.
 - Devolver `(clase, diferencias, suma)` ordenado de menor a mayor suma; la primera es el género reconocido.
 
-### 4. `evaluar.py`
-
-- Separar por persona (entrenamiento / prueba, o dejando una persona fuera cada vez).
-- Entrenar solo con las de entrenamiento y reconocer las de prueba con la misma lógica de `recognizer.py`.
-- Imprimir el error (%) y la matriz de confusión.
-- **Meta: error ≤ 5%.** Si no se cumple, ajustar primero los cortes y el número de subbandas, luego ampliar el banco de grabaciones.
-
-### 5. `app.py`
+### 4. `app.py`
 
 Dos pestañas:
 
@@ -73,7 +65,7 @@ Dos pestañas:
 
 Va al final: la interfaz vale el 30% de la nota, pero la lógica (70%) debe estar probada antes.
 
-### 6. `README.md` y `requirements.txt`
+### 5. `README.md` y `requirements.txt`
 
 - README: descripción, técnica en pocas líneas, cómo grabar, entrenar, evaluar y usar la app.
 - `requirements.txt`: `numpy`, `scipy`, `sounddevice`, `matplotlib`, `customtkinter`.

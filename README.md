@@ -25,7 +25,6 @@ gender-voice-filterbank/
 ├── config.py
 ├── trainer.py
 ├── recognizer.py
-├── evaluar.py
 ├── app.py
 ├── models/
 │   └── modelo.json        # generado por trainer.py
@@ -48,9 +47,8 @@ pip install -r requirements.txt
 1. Grabar el banco de grabaciones en `grabaciones/hombre/` y `grabaciones/mujer/`
    con el formato `genero_Pnn_rr.wav` (ej. `hombre_P03_02.wav`).
 2. Entrenar: `python trainer.py` (genera `models/modelo.json`).
-3. Evaluar: `python evaluar.py` (error % y matriz de confusión).
-4. Reconocer en vivo: `python recognizer.py`.
-5. Interfaz gráfica: `python app.py`.
+3. Reconocer en vivo: `python recognizer.py`.
+4. Interfaz gráfica: `python app.py`.
 
 ## Decisiones sin confirmar (TODO)
 
