@@ -5,7 +5,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import wavfile
-from scipy.signal import resample
 
 import config
 from core.banco_filtros import (energias_subbandas, espectro,
@@ -27,10 +26,12 @@ def leer_wav(ruta):
     else:
         data = data.astype(float)
 
-    # Remuestrear a FS si hace falta
+    # Se asume que la grabación ya está a FS (no se remuestrea)
     if fs != config.FS:
-        n_nuevo = int(len(data) * config.FS / fs)
-        data = resample(data, n_nuevo)
+        raise ValueError(
+            "La grabación %s tiene fs=%d Hz, se esperaba %d Hz"
+            % (ruta, fs, config.FS)
+        )
 
     # Recortar o rellenar con ceros hasta N muestras
     if len(data) > config.N:
