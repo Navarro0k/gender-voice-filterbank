@@ -27,11 +27,39 @@ AUDIO_URL = "https://mlc-datasets.oss-cn-guangzhou.aliyuncs.com/audio/es.tar.gz"
 
 def descargar(url, destino):
     if os.path.exists(destino):
-        print("Ya existe:", destino)
-        return
+        try:
+            with tarfile.open(destino, "r:*") as t:
+                t.getmembers()
+            print("Ya existe (valido):", destino)
+            return
+        except Exception:
+            print("Archivo corrupto/incompleto, se vuelve a descargar:", destino)
+            try:
+                os.remove(destino)
+            except OSError:
+                pass
     os.makedirs(os.path.dirname(destino), exist_ok=True)
     print("Descargando", url)
-    urllib.request.urlretrieve(url, destino)
+    with urllib.request.urlopen(url) as response:
+        total = int(response.headers.get("Content-Length", 0))
+        descargado = 0
+        bloque = 1024 * 1024
+        with open(destino, "wb") as f:
+            while True:
+                chunk = response.read(bloque)
+                if not chunk:
+                    break
+                f.write(chunk)
+                descargado += len(chunk)
+                if total > 0:
+                    pct = descargado * 100 / total
+                    print("\r  %6.2f%%  (%.1f / %.1f MB)" % (
+                        pct, descargado / 1024 / 1024, total / 1024 / 1024),
+                        end="", flush=True)
+                else:
+                    print("\r  %.1f MB descargados" % (descargado / 1024 / 1024),
+                          end="", flush=True)
+    print()
     print("Descargado:", destino)
 
 
@@ -44,7 +72,7 @@ def asegurar_splits(splits_dir):
     descargar(SPLITS_URL, tar_path)
     with tarfile.open(tar_path, "r:gz") as t:
         t.extractall(splits_dir)
-    print("Splits extraídos en", splits_dir)
+    print("Splits extraidos en", splits_dir)
 
 
 def recolectar_candidatos(splits_dir, palabra):
@@ -76,23 +104,22 @@ def recolectar_candidatos(splits_dir, palabra):
 def extraer_necesarios(audio_tar, extract_dir, needed_links):
     os.makedirs(extract_dir, exist_ok=True)
     needed_members = set("es/clips/" + link for link in needed_links)
-    found = set()
-    # Si ya están extraídos, no repetir
     pendientes = [m for m in needed_members
                   if not os.path.exists(os.path.join(extract_dir, m))]
     if not pendientes:
-        print("Audios ya extraídos.")
+        print("Audios ya extraidos.")
         return
     print("Extrayendo %d archivos del tar..." % len(pendientes))
     pendientes_set = set(pendientes)
+    found = 0
     with tarfile.open(audio_tar, "r:*") as tar:
         for member in tar:
             if member.name in pendientes_set:
                 tar.extract(member, extract_dir)
-                found.add(member.name)
-                if len(found) >= len(pendientes_set):
+                found += 1
+                if found >= len(pendientes_set):
                     break
-    print("Extraídos:", len(found))
+    print("Extraidos:", found)
 
 
 def guardar(lista, genero, extract_dir, salida):
@@ -152,7 +179,7 @@ def main():
     try:
         import soundfile
     except ImportError:
-        print("Falta 'soundfile'. Instálala con: pip install soundfile")
+        print("Falta 'soundfile'. Instalala con: pip install soundfile")
         return
 
     asegurar_splits(args.splits_dir)
@@ -178,8 +205,9 @@ def main():
     guardar(male, "hombre", extract_dir, args.salida)
     guardar(female, "mujer", extract_dir, args.salida)
 
-    print("Listo: %d audios por género en '%s'." % (n, args.salida))
+    print("Listo: %d audios por genero en '%s'." % (n, args.salida))
 
 
 if __name__ == "__main__":
     main()
+PY
