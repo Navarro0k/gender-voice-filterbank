@@ -9,7 +9,8 @@ import config
 import trainer
 from core.banco_filtros import (energias_subbandas, espectro,
                                espectro_promedio, frecuencias,
-                               indices_de_corte)
+                               indices_de_corte,
+                               suma_diferencias_absolutas)
 
 
 def personas_por_clase():
@@ -45,21 +46,6 @@ def entrenar_con_archivos(archivos_por_clase, cortes_hz):
     for clase in config.CLASES:
         energias[clase] = energias_subbandas(promedios[clase], indices)
     return energias, indices
-
-
-def clasificar(x, energias, indices):
-    """Predice la clase de una señal x."""
-    z = espectro(x)
-    E_X = energias_subbandas(z, indices)
-    mejor = None
-    mejor_suma = None
-    for clase, E_C in energias.items():
-        from core.banco_filtros import suma_diferencias_absolutas
-        s = suma_diferencias_absolutas(E_X, E_C)
-        if mejor_suma is None or s < mejor_suma:
-            mejor_suma = s
-            mejor = clase
-    return mejor
 
 
 def main():
@@ -99,7 +85,15 @@ def main():
         # Probar todas las grabaciones de la persona dejada fuera
         for ruta in grupos[clase_test][persona_test]:
             x = trainer.leer_wav(ruta)
-            pred = clasificar(x, energias, indices)
+            z = espectro(x)
+            E_X = energias_subbandas(z, indices)
+            pred = None
+            mejor_suma = None
+            for clase, E_C in energias.items():
+                s = suma_diferencias_absolutas(E_X, E_C)
+                if mejor_suma is None or s < mejor_suma:
+                    mejor_suma = s
+                    pred = clase
             total += 1
             if pred == clase_test:
                 correctos += 1
