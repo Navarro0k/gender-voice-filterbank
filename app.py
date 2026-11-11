@@ -34,6 +34,7 @@ class App(ctk.CTk):
         # Estado compartido
         self.frec = None
         self.promedios = None
+        self.datos = None
         self.cortes_hz = list(config.CORTES_HZ)
         self.indices = None
 
@@ -69,6 +70,7 @@ class App(ctk.CTk):
 
     def cargar_espectros(self):
         datos = trainer.espectros_por_clase()
+        self.datos = datos
         self.promedios = {}
         for clase in config.CLASES:
             self.promedios[clase] = espectro_promedio(datos[clase])
@@ -114,9 +116,7 @@ class App(ctk.CTk):
             self.cargar_espectros()
         self.frec = frecuencias(config.N, config.FS)
         self.indices = indices_de_corte(self.frec, self.cortes_hz)
-        energias = {}
-        for clase in config.CLASES:
-            energias[clase] = energias_subbandas(self.promedios[clase], self.indices)
+        energias = trainer.vectores_por_clase(self.datos, self.indices)
 
         os.makedirs(os.path.dirname(config.RUTA_MODELO), exist_ok=True)
         modelo = {
@@ -186,7 +186,7 @@ class App(ctk.CTk):
             z = espectro(x)
             frec = frecuencias(N, fs)
             indices = indices_de_corte(frec, cortes_hz)
-            E_X = energias_subbandas(z, indices)
+            E_X = trainer.vector_energias(z, indices)
 
             energias_clases = modelo.get("energias", {})
             resultados = []
