@@ -84,7 +84,9 @@ class App(ctk.CTk):
                 self.ax_ent.plot(self.frec, self.promedios[clase], label=clase)
         for fc in self.cortes_hz:
             self.ax_ent.axvline(fc, color="gray", linestyle="--")
-        self.ax_ent.set_xlabel("Frecuencia (Hz)")
+        self.ax_ent.set_xscale("log")
+        self.ax_ent.set_xlim(40, config.FS / 2)
+        self.ax_ent.set_xlabel("Frecuencia (Hz, escala logarítmica)")
         self.ax_ent.set_ylabel("Magnitud |X(k)|")
         self.ax_ent.set_title("Espectros promedio por clase (clic para marcar cortes)")
         self.ax_ent.legend()

@@ -103,7 +103,9 @@ def main():
         plt.plot(frec, promedios[clase], label=clase)
     for fc in config.CORTES_HZ:
         plt.axvline(fc, color="gray", linestyle="--")
-    plt.xlabel("Frecuencia (Hz)")
+    plt.xscale("log")
+    plt.xlim(40, config.FS / 2)
+    plt.xlabel("Frecuencia (Hz, escala logarítmica)")
     plt.ylabel("Magnitud |X(k)|")
     plt.title("Espectros promedio por clase")
     plt.legend()
