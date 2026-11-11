@@ -243,7 +243,7 @@ class App(ctk.CTk):
             self.cargar_espectros()
         self.frec = frecuencias(config.N, config.FS)
         self.indices = indices_de_corte(self.frec, self.cortes_hz)
-        energias = trainer.vectores_por_clase(self.datos, self.indices)
+        energias, estadisticas = trainer.estadisticas_por_clase(self.datos, self.indices)
 
         os.makedirs(os.path.dirname(config.RUTA_MODELO), exist_ok=True)
         modelo = {
@@ -251,24 +251,31 @@ class App(ctk.CTk):
             "N": config.N,
             "cortes_hz": list(self.cortes_hz),
             "energias": energias,
+            "estadisticas": estadisticas,
         }
         with open(config.RUTA_MODELO, "w", encoding="utf-8") as f:
             json.dump(modelo, f, indent=2, ensure_ascii=False)
 
-        # Tabla: una fila por subbanda y una columna de energía por clase
+        # Tabla: una fila por subbanda con energía, desviación estándar y varianza por clase
         rangos = rangos_subbandas(self.cortes_hz, config.FS)
         lim = [0] + list(self.indices) + [len(self.frec)]
-        cabeceras = ["Subbanda", "Rango (Hz)", "Índices k"] + [
-            "E_%s" % c for c in config.CLASES]
+        cabeceras = ["Subbanda", "Rango (Hz)", "Índices k"]
+        for c in config.CLASES:
+            cabeceras += ["E_%s" % c, "σ_%s" % c, "Var_%s" % c]
         filas = []
         for i in range(len(lim) - 1):
-            filas.append([str(i + 1), rangos[i],
-                          "%d – %d" % (lim[i], lim[i + 1] - 1)] +
-                         ["%.4f" % energias[c][i] for c in config.CLASES])
+            fila = [str(i + 1), rangos[i], "%d – %d" % (lim[i], lim[i + 1] - 1)]
+            for c in config.CLASES:
+                fila.append("%.4f" % energias[c][i])
+                fila.append("%.4f" % estadisticas[c]["desviacion_estandar"][i])
+                fila.append("%.4f" % estadisticas[c]["varianza"][i])
+            filas.append(fila)
         self.tabla_ent.mostrar(cabeceras, filas)
+        info_n = "  ·  ".join(
+            "%s: %d audios" % (c, estadisticas[c]["n"]) for c in config.CLASES)
         self.lbl_info_ent.configure(
-            text="Modelo guardado en %s  ·  %d subbandas  ·  fs = %d Hz  ·  N = %d"
-            % (config.RUTA_MODELO, len(filas), config.FS, config.N))
+            text="Modelo guardado en %s  ·  %d subbandas  ·  fs = %d Hz  ·  N = %d  ·  %s"
+            % (config.RUTA_MODELO, len(filas), config.FS, config.N, info_n))
 
     # ---------- Pestaña Reconocimiento ----------
     def _construir_reconocimiento(self):
