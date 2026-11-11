@@ -269,12 +269,11 @@ class App(ctk.CTk):
         self.lbl_estado = ctk.CTkLabel(controles, text="Listo")
         self.lbl_estado.pack(side="left", padx=10)
 
-        (self.fig_rec, self.ax_rec, self.canvas_rec,
-         self.toolbar_rec) = crear_grafica(frame)
 
         # Panel de resultados: tabla a la izquierda, veredicto a la derecha
+        # (se crea antes que la gráfica para que siempre tenga su espacio)
         panel = ctk.CTkFrame(frame, fg_color="transparent")
-        panel.pack(fill="x", padx=5, pady=(0, 5))
+        panel.pack(side="bottom", fill="x", padx=5, pady=(0, 5))
         self.tabla_rec = TablaResultados(panel)
         self.tabla_rec.pack(side="left", fill="both", expand=True, padx=(0, 8))
         ctk.CTkLabel(self.tabla_rec, text="Presiona «Grabar y reconocer» para ver "
@@ -294,6 +293,9 @@ class App(ctk.CTk):
         self.lbl_detalle = ctk.CTkLabel(tarjeta, text="", text_color="#555555",
                                         font=ctk.CTkFont(size=12), justify="center")
         self.lbl_detalle.pack(pady=(2, 18))
+
+        (self.fig_rec, self.ax_rec, self.canvas_rec,
+         self.toolbar_rec) = crear_grafica(frame)
 
     def grabar_reconocer(self):
         self.lbl_estado.configure(text="Grabando...")
