@@ -36,7 +36,41 @@ def crear_grafica(master, figsize=(7, 4)):
     toolbar.update()
     toolbar.pack(side="bottom", fill="x")
     canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
+    activar_zoom_rueda(canvas, ax, toolbar)
     return fig, ax, canvas, toolbar
+
+
+def _zoom_eje(lim, centro, factor, escala_log):
+    """Acerca (factor < 1) o aleja (factor > 1) un eje alrededor de centro."""
+    if escala_log:
+        a, b, c = np.log10(lim[0]), np.log10(lim[1]), np.log10(centro)
+        return 10 ** (c - (c - a) * factor), 10 ** (c + (b - c) * factor)
+    a, b = lim
+    return centro - (centro - a) * factor, centro + (b - centro) * factor
+
+
+def activar_zoom_rueda(canvas, ax, toolbar, paso=1.25):
+    """Rueda del mouse: zoom centrado en el cursor.
+
+    Rueda sola: zoom en ambos ejes. Ctrl + rueda: solo eje x.
+    Shift + rueda: solo eje y. El botón "inicio" de la barra vuelve a la
+    vista completa.
+    """
+    def al_girar(event):
+        if event.inaxes is not ax or event.xdata is None:
+            return
+        factor = 1 / paso if event.button == "up" else paso
+        toolbar.push_current()  # para que "atrás" deshaga el zoom
+        tecla = event.key or ""
+        if "shift" not in tecla:
+            ax.set_xlim(_zoom_eje(ax.get_xlim(), event.xdata, factor,
+                                  ax.get_xscale() == "log"))
+        if "control" not in tecla and "ctrl" not in tecla:
+            ax.set_ylim(_zoom_eje(ax.get_ylim(), event.ydata, factor,
+                                  ax.get_yscale() == "log"))
+        canvas.draw_idle()
+
+    canvas.mpl_connect("scroll_event", al_girar)
 
 
 class App(ctk.CTk):
