@@ -350,17 +350,50 @@ class App(ctk.CTk):
             resultados.sort(key=lambda r: r[2])
 
             ganador = resultados[0][0] if resultados else "?"
+            referencia = self._referencia_escalada(ganador, z)
 
             # Actualizar UI en el hilo principal
             self.after(0, lambda: self._mostrar_reconocimiento(
-                z, frec, cortes_hz, E_X, resultados, ganador))
+                z, frec, cortes_hz, E_X, resultados, ganador, referencia))
             self.after(0, lambda: self.lbl_estado.configure(text="Listo"))
         except Exception as e:
             self.after(0, lambda: self.lbl_estado.configure(text="Error: %s" % e))
 
-    def _mostrar_reconocimiento(self, z, frec, cortes_hz, E_X, resultados, ganador):
+    def _referencia_escalada(self, clase, z):
+        """Espectro promedio de la clase, escalado a la energía de z.
+
+        Las grabaciones del banco están normalizadas y la del micrófono no,
+        así que el promedio se multiplica por un factor que iguala la energía
+        total (suma de |X(k)|^2) de ambos espectros. Así se compara la forma,
+        que es lo que mide el vector de energías relativo.
+        Devuelve None si no hay grabaciones para calcular el promedio.
+        """
+        try:
+            if self.promedios is None or clase not in self.promedios:
+                self.after(0, lambda: self.lbl_estado.configure(
+                    text="Cargando espectro promedio de %s..." % clase))
+                self.datos = trainer.espectros_por_clase()
+                self.promedios = {c: espectro_promedio(self.datos[c])
+                                  for c in config.CLASES}
+            ref = np.asarray(self.promedios[clase], dtype=float)
+            if ref.size != np.size(z):
+                return None
+            energia_ref = float(np.sum(ref ** 2))
+            if energia_ref <= 0:
+                return None
+            return ref * np.sqrt(float(np.sum(np.asarray(z) ** 2)) / energia_ref)
+        except Exception:
+            return None
+
+    def _mostrar_reconocimiento(self, z, frec, cortes_hz, E_X, resultados,
+                                ganador, referencia=None):
         self.ax_rec.clear()
-        self.ax_rec.plot(frec, z, label="señal")
+        if referencia is not None:
+            # Promedio de la clase reconocida, de fondo y en gris
+            self.ax_rec.plot(frec, referencia, color="#9E9E9E", linewidth=1.2,
+                             alpha=0.8, zorder=1,
+                             label="promedio %s (escalado)" % ganador)
+        self.ax_rec.plot(frec, z, label="señal", zorder=2)
         for fc in cortes_hz:
             self.ax_rec.axvline(fc, color="gray", linestyle="--")
         self.ax_rec.set_xscale("log")
@@ -368,7 +401,11 @@ class App(ctk.CTk):
         formato_hz(self.ax_rec)
         self.ax_rec.set_xlabel("Frecuencia (Hz, escala logarítmica)")
         self.ax_rec.set_ylabel("Magnitud |X(k)|")
-        self.ax_rec.set_title("Espectro de la señal grabada")
+        if referencia is not None:
+            self.ax_rec.set_title("Espectro de la señal grabada vs. promedio de %s"
+                                  % ganador)
+        else:
+            self.ax_rec.set_title("Espectro de la señal grabada")
         self.ax_rec.legend()
         self.ax_rec.grid(True)
         self.canvas_rec.draw()
