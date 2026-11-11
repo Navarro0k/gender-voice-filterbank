@@ -265,7 +265,9 @@ class App(ctk.CTk):
         self.ax_rec.plot(frec, z, label="señal")
         for fc in cortes_hz:
             self.ax_rec.axvline(fc, color="gray", linestyle="--")
-        self.ax_rec.set_xlabel("Frecuencia (Hz)")
+        self.ax_rec.set_xscale("log")
+        self.ax_rec.set_xlim(40, frec[-1])
+        self.ax_rec.set_xlabel("Frecuencia (Hz, escala logarítmica)")
         self.ax_rec.set_ylabel("Magnitud |X(k)|")
         self.ax_rec.set_title("Espectro de la señal grabada")
         self.ax_rec.legend()
