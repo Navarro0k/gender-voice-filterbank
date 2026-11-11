@@ -28,6 +28,8 @@ Formato del JSON:
 
 Por decisión del usuario **no hay normalización ni filtro de media móvil**: la señal grabada pasa directo a la FFT. No agregarlos. Al leer un `.wav` solo se hace lo necesario para que coincida con la grabación en vivo: pasar a mono, escalar enteros a [−1, 1] (dividir por 32768 si es int16), remuestrear a `FS` si hace falta y recortar o rellenar con ceros hasta N muestras.
 
+**Excepción acordada con el usuario:** fuera de `core/`, el vector de energías se divide por su suma (`trainer.vector_energias`) y el vector de cada clase es el promedio de los vectores de sus grabaciones (`trainer.vectores_por_clase`). Sin esto la decisión dependía del volumen y la app siempre respondía «mujer».
+
 ## Arquitectura
 
 ```

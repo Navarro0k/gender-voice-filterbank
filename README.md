@@ -10,11 +10,11 @@ Laboratorio 2 - Procesamiento de Señales e Imágenes (Ing. de Sistemas, Univers
 2. Por clase se promedian los espectros de todas sus grabaciones.
 3. Se eligen entre 2 y 5 subbandas marcando los cortes sobre la gráfica de los espectros promedio.
 4. Energía de la subbanda i: `E = (1/N_i) * sum ||C_i(k)||^2`.
-5. El vector de energías de cada clase se guarda en `models/modelo.json` junto con `fs` y los cortes.
+5. El vector de cada grabación se divide por su suma (`E / sum(E)`) para que no dependa del volumen, y el vector de cada clase es el promedio de los vectores de sus grabaciones. Se guarda en `models/modelo.json` junto con `fs` y los cortes.
 6. En tiempo real se graba el comando y se calcula su vector `E_X` con los mismos cortes.
 7. Comparación por diferencia absoluta: `E_XC = sum_i |E_Xi - E_Ci|`. Gana la clase con menor `E_XC`.
 
-Sin normalización ni filtro de media móvil: la señal pasa directo a la FFT.
+Sin normalización de la señal ni filtro de media móvil: la señal pasa directo a la FFT. Lo único que se normaliza es el vector de energías (fuera de `core/`, en `trainer.vector_energias`).
 
 ## Estructura
 
@@ -52,6 +52,6 @@ pip install -r requirements.txt
 
 ## Decisiones sin confirmar (TODO)
 
-1. Número de subbandas y cortes: provisional S = 4 (3 cortes) en `config.py`.
+1. Número de subbandas y cortes: S = 4 con cortes en 80, 160 y 6000 Hz (`config.py`), elegidos con validación por persona (error ≈ 11 % sobre personas no vistas).
 2. fs y duración: provisional 22050 Hz y 2 s.
 3. Palabra del comando.
