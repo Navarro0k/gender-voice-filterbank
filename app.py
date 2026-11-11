@@ -10,6 +10,7 @@ import sounddevice as sd
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2Tk)
 from matplotlib.figure import Figure
+from matplotlib.ticker import FuncFormatter, LogFormatter
 
 import config
 import trainer
@@ -38,6 +39,16 @@ def crear_grafica(master, figsize=(7, 4)):
     canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
     activar_zoom_rueda(canvas, ax, toolbar)
     return fig, ax, canvas, toolbar
+
+
+def formato_hz(ax):
+    """En el eje x logarítmico muestra 100, 1000, 10000 en lugar de 10^2...
+
+    Las marcas intermedias (200, 300, ...) solo se rotulan al hacer zoom.
+    """
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: "%g" % v))
+    ax.xaxis.set_minor_formatter(LogFormatter(labelOnlyBase=False,
+                                              minor_thresholds=(1, 0.4)))
 
 
 def _zoom_eje(lim, centro, factor, escala_log):
@@ -195,6 +206,7 @@ class App(ctk.CTk):
             self.ax_ent.axvline(fc, color="gray", linestyle="--")
         self.ax_ent.set_xscale("log")
         self.ax_ent.set_xlim(40, config.FS / 2)
+        formato_hz(self.ax_ent)
         self.ax_ent.set_xlabel("Frecuencia (Hz, escala logarítmica)")
         self.ax_ent.set_ylabel("Magnitud |X(k)|")
         self.ax_ent.set_title("Espectros promedio por clase (clic para marcar cortes)")
@@ -353,6 +365,7 @@ class App(ctk.CTk):
             self.ax_rec.axvline(fc, color="gray", linestyle="--")
         self.ax_rec.set_xscale("log")
         self.ax_rec.set_xlim(40, frec[-1])
+        formato_hz(self.ax_rec)
         self.ax_rec.set_xlabel("Frecuencia (Hz, escala logarítmica)")
         self.ax_rec.set_ylabel("Magnitud |X(k)|")
         self.ax_rec.set_title("Espectro de la señal grabada")
