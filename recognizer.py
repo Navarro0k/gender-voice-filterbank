@@ -5,6 +5,7 @@ import numpy as np
 import sounddevice as sd
 
 import config
+from trainer import vector_energias
 from core.banco_filtros import (diferencias_absolutas, energia,
                                energias_subbandas, espectro, frecuencias,
                                indices_de_corte, suma_diferencias_absolutas)
@@ -43,7 +44,7 @@ def reconocer(modelo=None):
 
     frec = frecuencias(N, fs)
     indices = indices_de_corte(frec, cortes_hz)
-    E_X = energias_subbandas(z, indices)
+    E_X = vector_energias(z, indices)
 
     resultados = []
     for clase, E_C in energias_clases.items():
