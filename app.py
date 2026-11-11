@@ -161,14 +161,21 @@ class App(ctk.CTk):
         self.lbl_cortes_ent = ctk.CTkLabel(controles, text="Cortes: " + str(self.cortes_hz))
         self.lbl_cortes_ent.pack(side="left", padx=10)
 
+        # Tabla de resultados del entrenamiento (abajo; se crea antes que la
+        # gráfica para que siempre tenga su espacio)
+        self.tabla_ent = TablaResultados(frame)
+        self.tabla_ent.pack(side="bottom", fill="x", padx=5, pady=(0, 5))
+        ctk.CTkLabel(self.tabla_ent, text="Carga los espectros, marca los cortes y "
+                     "presiona «Entrenar y guardar» para ver los vectores de energía.",
+                     text_color="#555555").pack(padx=20, pady=20)
+        self.lbl_info_ent = ctk.CTkLabel(frame, text="", text_color="#555555",
+                                         anchor="w")
+        self.lbl_info_ent.pack(side="bottom", fill="x", padx=8)
+
         # Figura con barra de zoom
         (self.fig_ent, self.ax_ent, self.canvas_ent,
          self.toolbar_ent) = crear_grafica(frame)
         self.fig_ent.canvas.mpl_connect("button_press_event", self.click_corte)
-
-        # Tabla de resultados
-        self.txt_ent = ctk.CTkTextbox(frame, height=120)
-        self.txt_ent.pack(fill="x", padx=5, pady=5)
 
     def cargar_espectros(self):
         datos = trainer.espectros_por_clase()
@@ -236,14 +243,20 @@ class App(ctk.CTk):
         with open(config.RUTA_MODELO, "w", encoding="utf-8") as f:
             json.dump(modelo, f, indent=2, ensure_ascii=False)
 
-        # Mostrar tabla
-        self.txt_ent.delete("1.0", "end")
-        lineas = ["Vectores de energía por clase:"]
-        for clase in config.CLASES:
-            lineas.append("%s: %s" % (clase, [round(v, 4) for v in energias[clase]]))
-        lineas.append("Índices de corte: %s" % self.indices)
-        lineas.append("Cortes (Hz): %s" % self.cortes_hz)
-        self.txt_ent.insert("end", "\n".join(lineas))
+        # Tabla: una fila por subbanda y una columna de energía por clase
+        rangos = rangos_subbandas(self.cortes_hz, config.FS)
+        lim = [0] + list(self.indices) + [len(self.frec)]
+        cabeceras = ["Subbanda", "Rango (Hz)", "Índices k"] + [
+            "E_%s" % c for c in config.CLASES]
+        filas = []
+        for i in range(len(lim) - 1):
+            filas.append([str(i + 1), rangos[i],
+                          "%d – %d" % (lim[i], lim[i + 1] - 1)] +
+                         ["%.4f" % energias[c][i] for c in config.CLASES])
+        self.tabla_ent.mostrar(cabeceras, filas)
+        self.lbl_info_ent.configure(
+            text="Modelo guardado en %s  ·  %d subbandas  ·  fs = %d Hz  ·  N = %d"
+            % (config.RUTA_MODELO, len(filas), config.FS, config.N))
 
     # ---------- Pestaña Reconocimiento ----------
     def _construir_reconocimiento(self):
