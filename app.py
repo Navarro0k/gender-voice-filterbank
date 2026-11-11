@@ -7,7 +7,8 @@ import customtkinter as ctk
 import matplotlib.pyplot as plt
 import numpy as np
 import sounddevice as sd
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
+                                               NavigationToolbar2Tk)
 from matplotlib.figure import Figure
 
 import config
@@ -18,6 +19,24 @@ from core.banco_filtros import (diferencias_absolutas, energias_subbandas,
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
+
+
+def crear_grafica(master, figsize=(7, 4)):
+    """Crea figura, eje, lienzo y barra de herramientas de Matplotlib.
+
+    La barra trae los botones de inicio, atrás/adelante, desplazar (mano),
+    zoom por rectángulo (lupa) y guardar imagen.
+    """
+    fig = Figure(figsize=figsize, dpi=100)
+    ax = fig.add_subplot(111)
+    contenedor = ctk.CTkFrame(master, fg_color="white")
+    contenedor.pack(fill="both", expand=True, padx=5, pady=5)
+    canvas = FigureCanvasTkAgg(fig, master=contenedor)
+    toolbar = NavigationToolbar2Tk(canvas, contenedor, pack_toolbar=False)
+    toolbar.update()
+    toolbar.pack(side="bottom", fill="x")
+    canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
+    return fig, ax, canvas, toolbar
 
 
 class App(ctk.CTk):
@@ -57,11 +76,9 @@ class App(ctk.CTk):
         self.lbl_cortes_ent = ctk.CTkLabel(controles, text="Cortes: " + str(self.cortes_hz))
         self.lbl_cortes_ent.pack(side="left", padx=10)
 
-        # Figura
-        self.fig_ent = Figure(figsize=(7, 4), dpi=100)
-        self.ax_ent = self.fig_ent.add_subplot(111)
-        self.canvas_ent = FigureCanvasTkAgg(self.fig_ent, master=frame)
-        self.canvas_ent.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        # Figura con barra de zoom
+        (self.fig_ent, self.ax_ent, self.canvas_ent,
+         self.toolbar_ent) = crear_grafica(frame)
         self.fig_ent.canvas.mpl_connect("button_press_event", self.click_corte)
 
         # Tabla de resultados
@@ -92,10 +109,14 @@ class App(ctk.CTk):
         self.ax_ent.legend()
         self.ax_ent.grid(True)
         self.canvas_ent.draw()
+        self.toolbar_ent.update()  # la vista actual pasa a ser la de "inicio"
         self.lbl_cortes_ent.configure(text="Cortes: " + str(self.cortes_hz))
 
     def click_corte(self, event):
         if event.xdata is None or self.frec is None:
+            return
+        # Con la lupa o la mano activas el clic es para el zoom, no un corte
+        if self.toolbar_ent.mode or event.button != 1:
             return
         if len(self.cortes_hz) >= config.N_CORTES:
             return
@@ -150,10 +171,8 @@ class App(ctk.CTk):
         self.lbl_estado = ctk.CTkLabel(controles, text="Listo")
         self.lbl_estado.pack(side="left", padx=10)
 
-        self.fig_rec = Figure(figsize=(7, 4), dpi=100)
-        self.ax_rec = self.fig_rec.add_subplot(111)
-        self.canvas_rec = FigureCanvasTkAgg(self.fig_rec, master=frame)
-        self.canvas_rec.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        (self.fig_rec, self.ax_rec, self.canvas_rec,
+         self.toolbar_rec) = crear_grafica(frame)
 
         self.txt_rec = ctk.CTkTextbox(frame, height=160)
         self.txt_rec.pack(fill="x", padx=5, pady=5)
@@ -218,6 +237,7 @@ class App(ctk.CTk):
         self.ax_rec.legend()
         self.ax_rec.grid(True)
         self.canvas_rec.draw()
+        self.toolbar_rec.update()
 
         self.txt_rec.delete("1.0", "end")
         lineas = ["E_X: %s" % [round(v, 4) for v in E_X]]
