@@ -26,11 +26,6 @@ def grabar(fs, n_muestras):
 
 
 def reconocer(modelo=None):
-    """Graba, calcula E_X y compara contra cada clase.
-
-    Devuelve (clase_ganadora, resultados) donde resultados es una lista
-    de diccionarios ordenada de menor a mayor suma de diferencias.
-    """
     if modelo is None:
         modelo = cargar_modelo()
 
