@@ -12,6 +12,36 @@ from core.banco_filtros import (energias_subbandas, espectro,
                                indices_de_corte)
 
 
+def vector_energias(z, indices):
+    """Vector de energías relativo: [E_1 ... E_S] / sum(E_i).
+
+    Usa energias_subbandas del núcleo y divide por la suma, para que el
+    vector no dependa del volumen de la grabación ni de la distancia al
+    micrófono (si la señal se multiplica por g, todas las E_i se
+    multiplican por g^2 y el cociente no cambia). Así se compara la forma
+    en que se reparte la energía entre subbandas, no cuánta energía hay.
+    """
+    E = np.asarray(energias_subbandas(z, indices), dtype=float)
+    total = E.sum()
+    if total <= 0:
+        return E
+    return E / total
+
+
+def vectores_por_clase(datos, indices):
+    """Vector de cada clase: promedio de los vectores de sus grabaciones.
+
+    Se calcula el vector de energías de cada grabación y luego se promedian.
+    (Calcular la energía sobre el espectro promedio la subestima, porque
+    al promediar magnitudes de espectros distintos los picos se aplanan.)
+    """
+    vectores = {}
+    for clase in config.CLASES:
+        lista = [vector_energias(z, indices) for z in datos[clase]]
+        vectores[clase] = [float(v) for v in np.mean(lista, axis=0)]
+    return vectores
+
+
 def leer_wav(ruta):
     """Lee un .wav y lo deja listo para la FFT (mono, a FS, longitud N)."""
     fs, data = wavfile.read(ruta)
@@ -82,9 +112,7 @@ def main():
 
     # Calcular índices de corte y vectores de energía
     indices = indices_de_corte(frec, config.CORTES_HZ)
-    energias = {}
-    for clase in config.CLASES:
-        energias[clase] = energias_subbandas(promedios[clase], indices)
+    energias = vectores_por_clase(datos, indices)
 
     # Guardar JSON
     os.makedirs(os.path.dirname(config.RUTA_MODELO), exist_ok=True)
