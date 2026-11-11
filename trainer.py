@@ -19,12 +19,37 @@ def vector_energias(z, indices):
     return E / total
 
 
-def vectores_por_clase(datos, indices):
-    vectores = {}
+def vectores_individuales_por_clase(datos, indices):
+    """Devuelve {clase: arreglo(n_audios, n_subbandas)} con los vectores de cada audio."""
+    resultado = {}
     for clase in config.CLASES:
         lista = [vector_energias(z, indices) for z in datos[clase]]
-        vectores[clase] = [float(v) for v in np.mean(lista, axis=0)]
+        resultado[clase] = np.array(lista, dtype=float)
+    return resultado
+
+
+def vectores_por_clase(datos, indices):
+    individuales = vectores_individuales_por_clase(datos, indices)
+    vectores = {}
+    for clase in config.CLASES:
+        vectores[clase] = [float(v) for v in np.mean(individuales[clase], axis=0)]
     return vectores
+
+
+def estadisticas_por_clase(datos, indices):
+    """Calcula media, desviación estándar y varianza por clase y subbanda."""
+    individuales = vectores_individuales_por_clase(datos, indices)
+    energias = {}
+    estadisticas = {}
+    for clase in config.CLASES:
+        arr = individuales[clase]
+        energias[clase] = [float(v) for v in np.mean(arr, axis=0)]
+        estadisticas[clase] = {
+            "n": int(arr.shape[0]),
+            "desviacion_estandar": [float(v) for v in np.std(arr, axis=0, ddof=0)],
+            "varianza": [float(v) for v in np.var(arr, axis=0, ddof=0)],
+        }
+    return energias, estadisticas
 
 
 def leer_wav(ruta):
@@ -99,9 +124,9 @@ def main():
         plt.show()
     plt.close("all")
 
-    # Calcular índices de corte y vectores de energía
+    # Calcular índices de corte, vectores de energía y estadísticas
     indices = indices_de_corte(frec, config.CORTES_HZ)
-    energias = vectores_por_clase(datos, indices)
+    energias, estadisticas = estadisticas_por_clase(datos, indices)
 
     # Guardar JSON
     os.makedirs(os.path.dirname(config.RUTA_MODELO), exist_ok=True)
@@ -110,6 +135,7 @@ def main():
         "N": config.N,
         "cortes_hz": list(config.CORTES_HZ),
         "energias": energias,
+        "estadisticas": estadisticas,
     }
     with open(config.RUTA_MODELO, "w", encoding="utf-8") as f:
         json.dump(modelo, f, indent=2, ensure_ascii=False)
@@ -117,7 +143,10 @@ def main():
     print("Modelo guardado en", config.RUTA_MODELO)
     print("Indices de corte:", indices)
     for clase in config.CLASES:
-        print(clase, energias[clase])
+        print(clase, "energias (media):", energias[clase])
+        print(clase, "desviacion estandar:", estadisticas[clase]["desviacion_estandar"])
+        print(clase, "varianza:", estadisticas[clase]["varianza"])
+        print(clase, "n audios:", estadisticas[clase]["n"])
 
 
 if __name__ == "__main__":
