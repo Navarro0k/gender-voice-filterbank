@@ -110,7 +110,9 @@ def main():
     plt.title("Espectros promedio por clase")
     plt.legend()
     plt.grid(True)
-    plt.show()
+    if plt.get_backend().lower() != "agg":
+        plt.show()
+    plt.close("all")
 
     # Calcular índices de corte y vectores de energía
     indices = indices_de_corte(frec, config.CORTES_HZ)
