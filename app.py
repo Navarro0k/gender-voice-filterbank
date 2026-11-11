@@ -73,11 +73,62 @@ def activar_zoom_rueda(canvas, ax, toolbar, paso=1.25):
     canvas.mpl_connect("scroll_event", al_girar)
 
 
+# ---------- Tablas de resultados ----------
+AZUL = "#1F6AA5"
+FILA_PAR, FILA_IMPAR = "#FFFFFF", "#F2F5F9"
+FILA_TOTAL = "#E3EAF2"
+VERDE_FONDO, VERDE_TEXTO = "#DCF2E3", "#1E7B3A"
+
+
+def rangos_subbandas(cortes_hz, fs):
+    """Textos 'a – b' de cada subbanda a partir de los cortes en Hz."""
+    lim = [0] + sorted(cortes_hz) + [fs / 2]
+    return ["%g – %g" % (lim[i], lim[i + 1]) for i in range(len(lim) - 1)]
+
+
+class TablaResultados(ctk.CTkFrame):
+    """Tabla simple con cabecera, filas alternadas, fila total opcional
+    y una columna resaltada (la de la clase ganadora)."""
+
+    def __init__(self, master, **kwargs):
+        super().__init__(master, fg_color="#C9D3DE", corner_radius=6, **kwargs)
+
+    def mostrar(self, cabeceras, filas, total=None, resaltar_col=None):
+        for w in self.winfo_children():
+            w.destroy()
+        normal = ctk.CTkFont(size=13)
+        negrita = ctk.CTkFont(size=13, weight="bold")
+
+        def celda(texto, fila, col, fondo, color="#1A1A1A", fuente=normal):
+            ctk.CTkLabel(self, text=texto, fg_color=fondo, text_color=color,
+                         font=fuente, corner_radius=0, height=30
+                         ).grid(row=fila, column=col, sticky="nsew",
+                                padx=(0 if col else 1, 1), pady=(0 if fila else 1, 1))
+
+        for c, texto in enumerate(cabeceras):
+            celda(texto, 0, c, AZUL, "white", negrita)
+            self.grid_columnconfigure(c, weight=1, uniform="col")
+        for f, fila in enumerate(filas, start=1):
+            fondo = FILA_PAR if f % 2 else FILA_IMPAR
+            for c, texto in enumerate(fila):
+                if c == resaltar_col:
+                    celda(texto, f, c, VERDE_FONDO, VERDE_TEXTO)
+                else:
+                    celda(texto, f, c, fondo)
+        if total is not None:
+            f = len(filas) + 1
+            for c, texto in enumerate(total):
+                if c == resaltar_col:
+                    celda(texto, f, c, VERDE_FONDO, VERDE_TEXTO, negrita)
+                else:
+                    celda(texto, f, c, FILA_TOTAL, fuente=negrita)
+
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Reconocimiento de género por banco de filtros")
-        self.geometry("900x700")
+        self.geometry("1150x850")
 
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(fill="both", expand=True, padx=10, pady=10)
@@ -208,8 +259,28 @@ class App(ctk.CTk):
         (self.fig_rec, self.ax_rec, self.canvas_rec,
          self.toolbar_rec) = crear_grafica(frame)
 
-        self.txt_rec = ctk.CTkTextbox(frame, height=160)
-        self.txt_rec.pack(fill="x", padx=5, pady=5)
+        # Panel de resultados: tabla a la izquierda, veredicto a la derecha
+        panel = ctk.CTkFrame(frame, fg_color="transparent")
+        panel.pack(fill="x", padx=5, pady=(0, 5))
+        self.tabla_rec = TablaResultados(panel)
+        self.tabla_rec.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        ctk.CTkLabel(self.tabla_rec, text="Presiona «Grabar y reconocer» para ver "
+                     "las energías y diferencias por subbanda.",
+                     text_color="#555555").pack(padx=20, pady=30)
+
+        tarjeta = ctk.CTkFrame(panel, width=260, corner_radius=10,
+                               fg_color="white", border_width=2,
+                               border_color="#C9D3DE")
+        tarjeta.pack(side="right", fill="y")
+        tarjeta.pack_propagate(False)
+        ctk.CTkLabel(tarjeta, text="Género reconocido", text_color="#555555",
+                     font=ctk.CTkFont(size=14)).pack(pady=(22, 2))
+        self.lbl_genero = ctk.CTkLabel(tarjeta, text="—", text_color=AZUL,
+                                       font=ctk.CTkFont(size=34, weight="bold"))
+        self.lbl_genero.pack(pady=4)
+        self.lbl_detalle = ctk.CTkLabel(tarjeta, text="", text_color="#555555",
+                                        font=ctk.CTkFont(size=12), justify="center")
+        self.lbl_detalle.pack(pady=(2, 18))
 
     def grabar_reconocer(self):
         self.lbl_estado.configure(text="Grabando...")
@@ -275,14 +346,26 @@ class App(ctk.CTk):
         self.canvas_rec.draw()
         self.toolbar_rec.update()
 
-        self.txt_rec.delete("1.0", "end")
-        lineas = ["E_X: %s" % [round(v, 4) for v in E_X]]
-        lineas.append("Diferencias por subbanda:")
-        for clase, diffs, suma in resultados:
-            lineas.append("  %s: diffs=%s  suma=%.4f" % (clase, [round(d, 4) for d in diffs], suma))
-        lineas.append("")
-        lineas.append("Género reconocido: %s" % ganador.upper())
-        self.txt_rec.insert("end", "\n".join(lineas))
+        # Tabla: una fila por subbanda y una columna |E_X - E_C| por clase
+        por_clase = {clase: (diffs, suma) for clase, diffs, suma in resultados}
+        clases = [c for c in config.CLASES if c in por_clase]
+        rangos = rangos_subbandas(cortes_hz, frec[-1] * 2)
+        cabeceras = ["Subbanda", "Rango (Hz)", "E_X"] + [
+            "|E_X − E_%s|" % c for c in clases]
+        filas = []
+        for i, E in enumerate(E_X):
+            filas.append([str(i + 1), rangos[i], "%.4f" % E] +
+                         ["%.4f" % por_clase[c][0][i] for c in clases])
+        total = ["Suma", "", "%.4f" % float(np.sum(E_X))] + [
+            "%.4f" % por_clase[c][1] for c in clases]
+        col = 3 + clases.index(ganador) if ganador in clases else None
+        self.tabla_rec.mostrar(cabeceras, filas, total, resaltar_col=col)
+
+        # Tarjeta con el veredicto
+        self.lbl_genero.configure(text=ganador.upper(), text_color=VERDE_TEXTO)
+        detalle = ["menor suma de diferencias"]
+        detalle += ["%s: %.4f" % (c, por_clase[c][1]) for c in clases]
+        self.lbl_detalle.configure(text="\n".join(detalle))
 
 
 if __name__ == "__main__":
